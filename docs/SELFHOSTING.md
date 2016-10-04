@@ -38,6 +38,11 @@ knows what URLs to issue to clients.
 
 	-domain="example.com"
 
+### Setting CloudFlare Universal SSL
+When you use ngrok client with subdomain option, you might need to set the environment variable `CF_API_KEY`, `CF_API_EMAIL` for using CloudFlare Universal SSL.
+
+	CF_API_KEY=XXXXXXXX CF_API_EMAIL=XXXXX@example.com ./ngrokd
+
 ## 5. Configure the client
 In order to connect with a client, you'll need to set two options in ngrok's configuration file.
 The ngrok configuration file is a simple YAML file that is read from ~/.ngrok by default. You may specify
@@ -67,4 +72,3 @@ Special thanks @kk86bioinfo, @lyoshenka and everyone in the thread https://githu
 
 https://gist.github.com/lyoshenka/002b7fbd801d0fd21f2f
 https://github.com/inconshreveable/ngrok/issues/84
-
