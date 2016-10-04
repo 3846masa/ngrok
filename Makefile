@@ -5,6 +5,7 @@ BUILDTAGS=debug
 default: all
 
 deps: assets
+	GOOS="" GOARCH="" go get github.com/cloudflare/cloudflare-go
 	go get -tags '$(BUILDTAGS)' -d -v ngrok/...
 
 server: deps

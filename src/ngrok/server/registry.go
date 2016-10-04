@@ -8,6 +8,8 @@ import (
 	"ngrok/log"
 	"sync"
 	"time"
+  "os"
+  "github.com/cloudflare/cloudflare-go"
 )
 
 const (
@@ -146,6 +148,56 @@ func (r *TunnelRegistry) RegisterRepeat(urlFn func() string, t *Tunnel) (string,
 	}
 
 	return "", fmt.Errorf("Failed to assign a URL after %d attempts!", maxAttempts)
+}
+
+func (r *TunnelRegistry) RegisterToCloudFlare(subdomain string, vhost string) {
+  if ( os.Getenv("CF_API_KEY") == "" || os.Getenv("CF_API_EMAIL") == "" ) {
+    return
+  }
+
+  api, err := cloudflare.New(os.Getenv("CF_API_KEY"), os.Getenv("CF_API_EMAIL"))
+  if err != nil {
+    r.Error("Failed to register to cloudflare: %v", err)
+    return
+  }
+  // Fetch the zone ID
+  zoneId, err := api.ZoneIDByName(vhost)
+  if err != nil {
+    r.Error("Failed to fetch %s Zone: %v", vhost, err)
+    return
+  }
+
+  domainName := fmt.Sprintf("%s.%s", subdomain, vhost)
+
+  // Search DNS Record
+  dnsRecords, err := api.DNSRecords(zoneId, cloudflare.DNSRecord{ Name: domainName })
+  if err != nil {
+    r.Error("Failed to fetch %s DNS Record: %v", vhost, err)
+    return
+  }
+
+  if len(dnsRecords) == 0 {
+    res, err := api.CreateDNSRecord(zoneId, cloudflare.DNSRecord{
+      Name: domainName,
+      Type: "CNAME",
+      Content: vhost,
+      TTL: 120,
+    })
+
+    if err != nil {
+      r.Error("Failed to register %s DNS Record: %v", vhost, err)
+      return
+    }
+    dnsRecords = append(dnsRecords, res.Result)
+  }
+
+  newDnsRecord := dnsRecords[0]
+  newDnsRecord.Proxied = true
+  err = api.UpdateDNSRecord(zoneId, newDnsRecord.ID, newDnsRecord)
+  if err != nil {
+    r.Error("Failed to register %s DNS Record: %v", vhost, err)
+    return
+  }
 }
 
 func (r *TunnelRegistry) Del(url string) {
